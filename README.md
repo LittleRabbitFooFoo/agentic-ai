@@ -40,13 +40,14 @@ below.
 | File | Purpose |
 |---|---|
 | `models.py` | Pydantic models for tool argument/result shape validation |
-| `tools.py` | `get_schema`, `run_sql` (validator + read-only connection), `get_current_datetime` |
+| `tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — see `data_gap.ipynb`), `run_sql` (validator + read-only connection), `get_current_datetime` |
 | `init_logging_db.py` | Creates the logging DB (`prompts`, `conversations` tables) |
-| `seed_system_prompt.py` | Inserts and activates system prompt v1 |
+| `seed_system_prompt.py`, `seed_system_prompt_v2.py`, `seed_system_prompt_v3.py` | Inserts and activates system prompt v1/v2/v3 in turn — each a new immutable row, `is_active` flipped, per the plan's §8 traceability design. **Run v3 last** (or just v3 alone against a fresh logging DB) to get the current behaviour; v1/v2 exist for history, not for re-running in production. |
 | `repl.py` | The REPL agent itself |
 | `test_tools.py`, `test_repl.py` | pytest suite |
-| `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations |
-| `logging.db` | Populated logging DB from the evaluation run (tracked in git — it's KBs, not a large-data problem) |
+| `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations, plus a later "v3 re-run" section re-running the full set after the prompt/data fixes below |
+| `data_gap.ipynb` | Standalone, runnable demo of the `local_authority_district` data gap and its resolution (ingestion fix + `get_schema` exclusion + prompt v2/v3 behaviour) |
+| `logging.db` | Populated logging DB from all evaluation runs (tracked in git — it's KBs, not a large-data problem) |
 
 Docker containerisation (implementation plan §12) was **not implemented** — dropped
 per a standing "no Docker in any capstone project" constraint, noted as a Future
@@ -64,8 +65,11 @@ Extension in the design report rather than attempted.
    to keep the evaluation-run `logging.db` already in the repo):
    ```
    python init_logging_db.py
-   python seed_system_prompt.py
+   python seed_system_prompt_v3.py
    ```
+   (v3 is the current active version — see the file table above. `seed_system_prompt.py`
+   and `seed_system_prompt_v2.py` insert v1/v2 for history; only run them first, before
+   v3, if you want the full version history in a fresh `logging.db`.)
 4. **Set your API key** — create a `.env` file in the project root:
    ```
    ANTHROPIC_API_KEY=sk-ant-...
@@ -86,10 +90,11 @@ Type a question, get an answer; Ctrl-D to exit. Each session gets a fresh
 pytest -v
 ```
 
-17 tests covering SQL validation (rejects non-`SELECT`, chained statements, write
+19 tests covering SQL validation (rejects non-`SELECT`, chained statements, write
 keywords), the read-only connection genuinely refusing writes, connection cleanup on
-both success and exception paths, and schema-cache behaviour (only queried once per
-session).
+both success and exception paths, schema-cache behaviour (only queried once per
+session), composite unique keys surfaced by `get_schema`, and `local_authority_district`
+correctly hidden from it.
 
 ## Installing dependencies
 
@@ -101,3 +106,28 @@ pip install -r requirements.txt
 `requirements.txt` is generated from actual imports (`pipreqs --scan-notebooks`), not
 a full environment freeze — see Task 13 notes in the build brief for how it was
 produced and cross-checked.
+
+## What's code-enforced vs. prompt-engineered
+
+Worth being explicit about, since they carry different reliability guarantees:
+
+- **Code-enforced (hard):** the read-only SQLite connection, the SQL validator
+  (single `SELECT`, no chaining, no write keywords), schema-cache-once-per-session,
+  `local_authority_district` hidden from `get_schema`. These hold regardless of model
+  behaviour — verified by `test_tools.py`/`test_repl.py`, not just observed in
+  conversation.
+- **Prompt-engineered (soft):** schema-first behaviour, out-of-domain/write refusal,
+  asking which column is meant on ambiguity, tie-reporting, excluding NULL from
+  rankings (v2/v3). These have held in every live test run so far (see `testing.ipynb`
+  and `data_gap.ipynb`), but are model behaviour, not a guarantee — a differently
+  phrased question or a future model swap could behave differently. Worth naming as a
+  limitation in the report, not just a solved problem.
+
+## Known open item
+
+The injection-attempt eval question (Task 9, Q8) was refused entirely at the
+model/prompt layer — the agent never attempted a `run_sql` call, so the code-level
+validator and read-only backstop were never actually exercised by that specific live
+attempt (both are independently confirmed via pytest, just not through this path). A
+follow-up test that gets the model to actually issue a disguised-write `run_sql` call
+would close this out — flagged in `testing.ipynb`, not yet done.
