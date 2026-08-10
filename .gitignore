@@ -2,9 +2,6 @@
 data/road_safety.db
 data/raw/*.csv
 
-# Logging DB — runtime-generated state, not source
-logging.db
-
 # Secrets
 .env
 
