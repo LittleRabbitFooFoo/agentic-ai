@@ -6,14 +6,12 @@ in a fresh clone without the data present.
 """
 
 import sqlite3
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 import tools
-from tools import SqlValidationError, get_current_datetime, run_sql, validate_sql
+from tools import SqlValidationError, get_current_datetime, get_schema, run_sql, validate_sql
 
 
 @pytest.fixture
@@ -22,6 +20,35 @@ def temp_db(tmp_path):
     conn = sqlite3.connect(db_path)
     conn.execute("CREATE TABLE t (id INTEGER, name TEXT)")
     conn.execute("INSERT INTO t VALUES (1, 'a'), (2, 'b')")
+    conn.commit()
+    conn.close()
+    return str(db_path)
+
+
+@pytest.fixture
+def domain_shaped_db(tmp_path):
+    """A minimal DB with the real collision/vehicle/casualty table names and
+    the same composite unique indexes as the actual STATS19 DB, so
+    get_schema's key-detection logic can be tested without the real
+    (gitignored) 1.3GB database.
+    """
+    db_path = tmp_path / "domain.db"
+    conn = sqlite3.connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE collision (collision_index TEXT, collision_year INTEGER);
+        CREATE UNIQUE INDEX idx_collision_key ON collision(collision_index);
+
+        CREATE TABLE vehicle (collision_index TEXT, vehicle_reference INTEGER);
+        CREATE UNIQUE INDEX idx_vehicle_key ON vehicle(collision_index, vehicle_reference);
+
+        CREATE TABLE casualty (
+            collision_index TEXT, vehicle_reference INTEGER, casualty_reference INTEGER
+        );
+        CREATE UNIQUE INDEX idx_casualty_key
+            ON casualty(collision_index, vehicle_reference, casualty_reference);
+        """
+    )
     conn.commit()
     conn.close()
     return str(db_path)
@@ -124,3 +151,17 @@ def test_run_sql_closes_connection_when_query_raises(temp_db):
 def test_get_current_datetime_returns_iso_string():
     result = get_current_datetime()
     assert "T" in result.datetime
+
+
+# --- get_schema surfaces composite unique keys ------------------------------
+
+
+def test_get_schema_reports_composite_unique_keys(domain_shaped_db):
+    result = get_schema(db_path=domain_shaped_db)
+    keys_by_table = {t.table: t.unique_keys for t in result.tables}
+
+    assert keys_by_table["collision"] == [["collision_index"]]
+    assert keys_by_table["vehicle"] == [["collision_index", "vehicle_reference"]]
+    assert keys_by_table["casualty"] == [
+        ["collision_index", "vehicle_reference", "casualty_reference"]
+    ]

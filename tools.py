@@ -73,6 +73,28 @@ def run_sql(query: str, db_path: str = DB_PATH) -> list[dict]:
         conn.close()
 
 
+def _unique_keys(conn: sqlite3.Connection, table: str) -> list[list[str]]:
+    """Composite unique keys for a table, e.g. casualty's (collision_index,
+    vehicle_reference, casualty_reference) — so the model doesn't mistake a
+    per-collision-scoped column (like casualty_reference alone) for a
+    globally unique row identifier.
+    """
+    keys = []
+    for index_name, is_unique in (
+        (row[1], row[2]) for row in conn.execute(f"PRAGMA index_list({table})")
+    ):
+        if not is_unique:
+            continue
+        columns = [
+            row[2]
+            for row in sorted(
+                conn.execute(f"PRAGMA index_info({index_name})"), key=lambda r: r[0]
+            )
+        ]
+        keys.append(columns)
+    return keys
+
+
 def get_schema(db_path: str = DB_PATH) -> GetSchemaResult:
     """Introspect the three denormalised domain tables only."""
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -83,7 +105,11 @@ def get_schema(db_path: str = DB_PATH) -> GetSchemaResult:
             columns = [
                 ColumnInfo(name=row[1], type=row[2]) for row in cursor.fetchall()
             ]
-            tables.append(TableSchema(table=table, columns=columns))
+            tables.append(
+                TableSchema(
+                    table=table, columns=columns, unique_keys=_unique_keys(conn, table)
+                )
+            )
         return GetSchemaResult(tables=tables)
     finally:
         conn.close()

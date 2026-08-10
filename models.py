@@ -19,6 +19,7 @@ class ColumnInfo(BaseModel):
 class TableSchema(BaseModel):
     table: str
     columns: list[ColumnInfo]
+    unique_keys: list[list[str]] = []
 
 
 class GetSchemaResult(BaseModel):
