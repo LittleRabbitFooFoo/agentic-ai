@@ -13,7 +13,8 @@ quote a transcript verbatim.
 - `data_gap.ipynb` — standalone, runnable demo of the local_authority_district finding and its fix
 - `logging.db` — raw `prompts`/`conversations` tables, queryable directly
 - `git log` on `dev`/`main` — every commit message is a detailed account of what was built/found/fixed and why (chronology at the bottom of this doc)
-- `README.md` — architecture, file map, code-enforced-vs-prompt-engineered breakdown
+- `README.md` — **architecture diagram (Mermaid) is here**, plus file map and the
+  code-enforced-vs-prompt-engineered breakdown
 - `P6_implementation_plan.md` — the original design spec, §1–14
 
 ---

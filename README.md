@@ -17,6 +17,54 @@ the task-by-task build brief is in `P6_claude_code_brief.md`.
 - Every turn of every conversation is logged to a local SQLite logging database,
   tagged with the system prompt version that produced it.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    User(["User (terminal)"])
+
+    subgraph Local["Local process — repl.py"]
+        REPL["REPL loop<br/>AgentState: conversation_id,<br/>schema_fetched, cached_schema,<br/>turn_number (no rollback)"]
+        Dispatch{"stop_reason"}
+        Tools["execute_tool()"]
+        GetSchema["get_schema()<br/>3 denormalised tables only,<br/>composite unique keys,<br/>local_authority_district hidden"]
+        RunSql["run_sql()<br/>validate_sql() first:<br/>single SELECT, no chaining,<br/>no write keywords"]
+        DateTime["get_current_datetime()"]
+    end
+
+    subgraph Remote["Anthropic Messages API"]
+        API["claude-haiku-4-5-20251001<br/>via requests — no SDK,<br/>tools/tool_use/tool_result<br/>all hand-built"]
+    end
+
+    subgraph Data["Local SQLite"]
+        STATS19[("road_safety.db<br/>mode=ro connection<br/>(hard backstop)")]
+        LoggingDB[("logging.db<br/>prompts (versioned,<br/>immutable) + conversations")]
+    end
+
+    User -->|question| REPL
+    LoggingDB -->|active system prompt| REPL
+    REPL -->|system + messages + tools schema| API
+    API --> Dispatch
+    Dispatch -->|tool_use| Tools
+    Dispatch -->|end_turn| REPL
+    Tools --> GetSchema & RunSql & DateTime
+    GetSchema -->|PRAGMA introspection| STATS19
+    RunSql -->|validated SELECT only| STATS19
+    Tools -->|tool_result| REPL
+    REPL -->|tool_result turn, loop until end_turn| API
+    REPL -.->|every turn logged| LoggingDB
+    REPL -->|final answer| User
+```
+
+Two things worth calling out if this goes in the report: the `mode=ro` SQLite
+connection is the actual hard guarantee against writes — `validate_sql()` is
+belt-and-braces defence-in-depth, not the only thing standing between the model and a
+write (see "What's code-enforced vs. prompt-engineered" further down for the full
+breakdown of what's guaranteed vs. observed-so-far). The `Dispatch → Tools → REPL →
+API` loop is exactly how the tool-use round-trip actually works: nothing returns to
+the user until `stop_reason` is `end_turn`, which may take several tool calls within
+one user turn.
+
 ## Dataset
 
 STATS19 Road Safety Collision Data — the UK Department for Transport's official road
