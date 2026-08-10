@@ -1,4 +1,4 @@
-"""pytest suite for repl.py: schema-cache logic.
+"""pytest suite for agentic_system.py: schema-cache logic.
 
 Covers the §5 agent-state requirement that get_schema is only ever
 actually queried once per session, even if the model calls the tool
@@ -7,8 +7,8 @@ again later in the same conversation.
 
 from unittest.mock import patch
 
+from agentic_system import AgentState, execute_tool
 from models import ColumnInfo, GetSchemaResult, TableSchema
-from repl import AgentState, execute_tool
 
 
 def test_schema_cache_only_calls_get_schema_once_per_session():
@@ -17,7 +17,7 @@ def test_schema_cache_only_calls_get_schema_once_per_session():
     )
     state = AgentState()
 
-    with patch("repl.get_schema", return_value=fake_result) as mock_get_schema:
+    with patch("agentic_system.get_schema", return_value=fake_result) as mock_get_schema:
         first_content, first_error = execute_tool("get_schema", {}, state)
         second_content, second_error = execute_tool("get_schema", {}, state)
 

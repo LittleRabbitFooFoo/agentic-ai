@@ -23,7 +23,7 @@ the task-by-task build brief is in `P6_claude_code_brief.md`.
 flowchart TD
     User(["User (terminal)"])
 
-    subgraph Local["Local process — repl.py"]
+    subgraph Local["Local process — agentic_system.py"]
         REPL["REPL loop<br/>AgentState: conversation_id,<br/>schema_fetched, cached_schema,<br/>turn_number (no rollback)"]
         Dispatch{"stop_reason"}
         Tools["execute_tool()"]
@@ -91,8 +91,8 @@ below.
 | `tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — see `data_gap.ipynb`), `run_sql` (validator + read-only connection), `get_current_datetime` |
 | `init_logging_db.py` | Creates the logging DB (`prompts`, `conversations` tables) |
 | `seed_system_prompt.py`, `seed_system_prompt_v2.py`, `seed_system_prompt_v3.py` | Inserts and activates system prompt v1/v2/v3 in turn — each a new immutable row, `is_active` flipped, per the plan's §8 traceability design. **Run v3 last** (or just v3 alone against a fresh logging DB) to get the current behaviour; v1/v2 exist for history, not for re-running in production. |
-| `repl.py` | The REPL agent itself |
-| `test_tools.py`, `test_repl.py` | pytest suite |
+| `agentic_system.py` | The REPL agent itself (the actual running model) |
+| `test_tools.py`, `test_agentic_system.py` | pytest suite |
 | `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations, plus a later "v3 re-run" section re-running the full set after the prompt/data fixes below |
 | `data_gap.ipynb` | Standalone, runnable demo of the `local_authority_district` data gap and its resolution (ingestion fix + `get_schema` exclusion + prompt v2/v3 behaviour) |
 | `logging.db` | Populated logging DB from all evaluation runs (tracked in git — it's KBs, not a large-data problem) |
@@ -126,7 +126,7 @@ Extension in the design report rather than attempted.
 ## Running the REPL
 
 ```
-python repl.py
+python agentic_system.py
 ```
 
 Type a question, get an answer; Ctrl-D to exit. Each session gets a fresh
@@ -162,8 +162,8 @@ Worth being explicit about, since they carry different reliability guarantees:
 - **Code-enforced (hard):** the read-only SQLite connection, the SQL validator
   (single `SELECT`, no chaining, no write keywords), schema-cache-once-per-session,
   `local_authority_district` hidden from `get_schema`. These hold regardless of model
-  behaviour — verified by `test_tools.py`/`test_repl.py`, not just observed in
-  conversation.
+  behaviour — verified by `test_tools.py`/`test_agentic_system.py`, not just observed
+  in conversation.
 - **Prompt-engineered (soft):** schema-first behaviour, out-of-domain/write refusal,
   asking which column is meant on ambiguity, tie-reporting, excluding NULL from
   rankings (v2/v3). These have held in every live test run so far (see `testing.ipynb`

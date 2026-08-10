@@ -141,7 +141,7 @@ where there's a real args model (`run_sql`) and trivial empty-object schemas for
 two no-arg tools; manual `stop_reason: tool_use` loop (up to `MAX_TOOL_ROUNDS = 10` as
 a safety valve); `tool_result` blocks constructed and appended by hand, tagged
 `is_error` so the model can see and self-correct from a validation failure or a
-malformed query. See `repl.py` directly for the full loop if the report wants to walk
+malformed query. See `agentic_system.py` directly for the full loop if the report wants to walk
 through the mechanics.
 
 ## 5. Data-quality findings (secondary, but real "chain project" content)
