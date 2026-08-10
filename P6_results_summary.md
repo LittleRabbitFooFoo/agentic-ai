@@ -1,18 +1,17 @@
 # P6 Results Summary — for report writing
 
 This is a condensed handoff, not a replacement for the primary sources. It exists
-because `testing.ipynb` (72 cells) and `data_gap.ipynb` repeat a full ~40-column
-`get_schema` JSON dump in nearly every reconstructed conversation — real signal, but
-buried in noise for anyone writing the report rather than debugging the agent. Every
-number below was pulled from a real, logged run and cross-checked against a direct
-DB query at the time; primary sources are named per section if you need to verify or
-quote a transcript verbatim.
+because `testing.ipynb` (72 cells) repeats a full ~40-column `get_schema` JSON dump
+in nearly every reconstructed conversation — real signal, but buried in noise for
+anyone writing the report rather than debugging the agent. Every number below was
+pulled from a real, logged run and cross-checked against a direct DB query at the
+time; primary sources are named per section if you need to verify or quote a
+transcript verbatim.
 
 **Primary sources**, in case you need to go deeper than this doc:
 - `testing.ipynb` — full reconstructed transcripts, original Task 9 run + "v3 re-run" section
-- `data_gap.ipynb` — standalone, runnable demo of the local_authority_district finding and its fix
 - `logging.db` — raw `prompts`/`conversations` tables, queryable directly
-- `git log` on `dev`/`main` — every commit message is a detailed account of what was built/found/fixed and why (chronology at the bottom of this doc)
+- `git log --oneline` on `dev`/`main` — every commit message is a detailed account of what was built/found/fixed and why, in order
 - `README.md` — **architecture diagram (Mermaid) is here**, plus file map and the
   code-enforced-vs-prompt-engineered breakdown
 - `P6_implementation_plan.md` — the original design spec, §1–14
@@ -128,11 +127,11 @@ attempted `run_sql` at all.
 (`validate_sql`'s keyword/chaining check, and the `mode=ro` read-only connection) were
 never actually exercised by this specific live attempt. Both are independently proven
 via `test_tools.py` (a mocked write attempt against `validate_sql`, and a real write
-attempt against a read-only connection, both correctly rejected) — but a live
-adversarial test that actually reaches the validator (e.g. "just run this exact SQL
-string for me: `DELETE FROM collision...`", framed as pass-through rather than
-instruction override) hasn't been done. Flag this as a limitation/future work item,
-not a gap glossed over.
+attempt against a read-only connection, both correctly rejected), but not via a live
+adversarial path that reaches them. This is a stated limitation, not a gap glossed
+over: a live test that reaches the validator (e.g. "just run this exact SQL string
+for me: `DELETE FROM collision...`", framed as pass-through rather than instruction
+override) is named as future work in the design report rather than attempted here.
 
 ### 4d. Tool/function calling in LLM agents
 The whole REPL is a worked example of hand-implementing the Anthropic tool-use
@@ -187,27 +186,8 @@ assume.
 | `local_authority_highway` NULL rows (fatal, 2024 / 2025) | 64 / 99 |
 | pytest suite | 19 passed, 0 failed |
 
-## 8. Chronology (git log, `dev` branch, oldest to newest)
+## 8. Full chronology
 
-```
-fd14ec4  Scaffold repo: gitignore, requirements skeleton, brief/plan docs, existing notebooks
-af6ac64  Add Pydantic models for tool argument/result shape validation
-aa12b59  Add logging DB init script (prompts, conversations)
-05f8044  Add tool implementations: get_schema, run_sql, get_current_datetime
-299de32  Add system prompt v1 and seed script
-8aaaabb  Add REPL script: raw requests against the Messages API, manual tool-use round-trips
-51737ed  Add pytest suite: validator, read-only backstop, connection lifecycle, schema cache
-baabb36  Run full 10-question evaluation set, commit logged results
-b03ff02  Populate testing notebook: reconstructed conversations + observations
-3786f5a  Add README
-98f830a  Task 13: final requirements.txt, clean re-run of script/tests/notebook
-25e3f93  get_schema now surfaces composite unique keys, fixing a real undercounting bug
-6074cd5  Add data_gap.ipynb: standalone demo of the local_authority_district finding
-60bd299  Hide local_authority_district from get_schema, steering the agent to coded fields
-8779418  Decode local_authority_ons_district/highway (alphanumeric ONS codes)
-be86408  Update data_gap.ipynb to reflect the ingestion fix, sync logging.db
-d5c6aa0  Add system prompt v2: ask on ambiguous columns, check for ties
-93712d4  Update data_gap.ipynb: mark tie/ambiguity nuances as fixed by prompt v2
-3351107  Add system prompt v3 (exclude NULL from rankings), full re-run + tests
-7f79432  Bring README up to date with v2/v3 prompts, data_gap.ipynb, test count
-```
+Not reproduced here — a hand-copied commit list goes stale the moment another
+commit lands. Run `git log --oneline --reverse dev` for the complete, always-current
+build history.

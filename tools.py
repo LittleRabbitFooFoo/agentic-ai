@@ -16,11 +16,11 @@ DB_PATH = "data/road_safety.db"
 
 DOMAIN_TABLES = ("collision", "vehicle", "casualty")
 
-# Columns hidden from get_schema despite existing in the table: almost entirely
-# unpopulated in this dataset (see data_gap.ipynb), so hiding them steers the
-# model toward the coded alternative (local_authority_highway /
-# local_authority_ons_district) that's actually populated for every year,
-# rather than it discovering the gap turn by turn as in the Task 9 Q4/5 run.
+# Columns hidden from get_schema despite existing in the table: local_authority_district
+# is populated for only 194 of 513,801 collision rows (2021 only, 0 elsewhere), so
+# hiding it steers the model toward the coded alternatives (local_authority_highway /
+# local_authority_ons_district) that are actually populated for every year, rather
+# than it discovering the gap turn by turn as in the Task 9 Q4/5 run.
 EXCLUDED_COLUMNS = {
     "collision": {"local_authority_district"},
 }

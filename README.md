@@ -88,13 +88,12 @@ below.
 | File | Purpose |
 |---|---|
 | `models.py` | Pydantic models for tool argument/result shape validation |
-| `tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — see `data_gap.ipynb`), `run_sql` (validator + read-only connection), `get_current_datetime` |
+| `tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — populated for only 194/513,801 collision rows), `run_sql` (validator + read-only connection), `get_current_datetime` |
 | `init_logging_db.py` | Creates the logging DB (`prompts`, `conversations` tables) |
 | `seed_system_prompt.py`, `seed_system_prompt_v2.py`, `seed_system_prompt_v3.py` | Inserts and activates system prompt v1/v2/v3 in turn — each a new immutable row, `is_active` flipped, per the plan's §8 traceability design. **Run v3 last** (or just v3 alone against a fresh logging DB) to get the current behaviour; v1/v2 exist for history, not for re-running in production. |
 | `agentic_system.py` | The REPL agent itself (the actual running model) |
 | `test_tools.py`, `test_agentic_system.py` | pytest suite |
 | `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations, plus a later "v3 re-run" section re-running the full set after the prompt/data fixes below |
-| `data_gap.ipynb` | Standalone, runnable demo of the `local_authority_district` data gap and its resolution (ingestion fix + `get_schema` exclusion + prompt v2/v3 behaviour) |
 | `logging.db` | Populated logging DB from all evaluation runs (tracked in git — it's KBs, not a large-data problem) |
 
 Docker containerisation (implementation plan §12) was **not implemented** — dropped
@@ -171,16 +170,18 @@ Worth being explicit about, since they carry different reliability guarantees:
   in conversation.
 - **Prompt-engineered (soft):** schema-first behaviour, out-of-domain/write refusal,
   asking which column is meant on ambiguity, tie-reporting, excluding NULL from
-  rankings (v2/v3). These have held in every live test run so far (see `testing.ipynb`
-  and `data_gap.ipynb`), but are model behaviour, not a guarantee — a differently
-  phrased question or a future model swap could behave differently. Worth naming as a
-  limitation in the report, not just a solved problem.
+  rankings (v2/v3). These have held in every live test run so far (see `testing.ipynb`),
+  but are model behaviour, not a guarantee — a differently phrased question or a
+  future model swap could behave differently. Named as a limitation in the design
+  report, not presented as a solved problem.
 
-## Known open item
+## Known limitation
 
 The injection-attempt eval question (Task 9, Q8) was refused entirely at the
 model/prompt layer — the agent never attempted a `run_sql` call, so the code-level
 validator and read-only backstop were never actually exercised by that specific live
-attempt (both are independently confirmed via pytest, just not through this path). A
-follow-up test that gets the model to actually issue a disguised-write `run_sql` call
-would close this out — flagged in `testing.ipynb`, not yet done.
+attempt (both are independently confirmed via pytest, just not through this path).
+Documented as a limitation in the design report rather than closed out here. A
+follow-up test that gets the model to actually issue a disguised-write `run_sql`
+call (flagged in `testing.ipynb`) is the concrete next step if this is pursued
+further.

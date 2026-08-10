@@ -170,7 +170,7 @@ def test_get_schema_reports_composite_unique_keys(domain_shaped_db):
 
 
 def test_get_schema_hides_local_authority_district(domain_shaped_db):
-    # Almost entirely unpopulated in the real dataset (see data_gap.ipynb) — hidden
+    # Populated for only 194 of 513,801 collision rows in the real dataset — hidden
     # so the model uses local_authority_highway/ons_district instead.
     result = get_schema(db_path=domain_shaped_db)
     collision_columns = next(t.columns for t in result.tables if t.table == "collision")
