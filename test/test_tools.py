@@ -1,4 +1,4 @@
-"""pytest suite for tools.py: SQL validation and connection safety.
+"""pytest suite for model/tools.py: SQL validation and connection safety.
 
 Uses a throwaway temp SQLite DB rather than the real (gitignored,
 1.3GB) STATS19 DB, so these tests are self-contained and reproducible
@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import tools
-from tools import SqlValidationError, get_current_datetime, get_schema, run_sql, validate_sql
+from model import tools
+from model.tools import SqlValidationError, get_current_datetime, get_schema, run_sql, validate_sql
 
 
 @pytest.fixture

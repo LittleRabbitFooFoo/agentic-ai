@@ -10,7 +10,7 @@ transcript verbatim.
 
 **Primary sources**, in case you need to go deeper than this doc:
 - `testing.ipynb` — full reconstructed transcripts, original Task 9 run + "v3 re-run" section
-- `logging.db` — raw `prompts`/`conversations` tables, queryable directly
+- `prompt/logging.db` — raw `prompts`/`conversations` tables, queryable directly
 - `git log --oneline` on `dev`/`main` — every commit message is a detailed account of what was built/found/fixed and why, in order
 - `README.md` — **architecture diagram (Mermaid) is here**, plus file map and the
   code-enforced-vs-prompt-engineered breakdown
@@ -126,7 +126,7 @@ attempted `run_sql` at all.
 *Important nuance for the report:* this means the two code-level defences
 (`validate_sql`'s keyword/chaining check, and the `mode=ro` read-only connection) were
 never actually exercised by this specific live attempt. Both are independently proven
-via `test_tools.py` (a mocked write attempt against `validate_sql`, and a real write
+via `test/test_tools.py` (a mocked write attempt against `validate_sql`, and a real write
 attempt against a read-only connection, both correctly rejected), but not via a live
 adversarial path that reaches them. This is a stated limitation, not a gap glossed
 over: a live test that reaches the validator (e.g. "just run this exact SQL string
@@ -149,7 +149,7 @@ through the mechanics.
   101,087 collisions in 2021, and 0 in every other year — discovered by the agent
   itself mid-conversation (Q4/Q5, original Task 9 run), which self-corrected across 8
   diagnostic queries and reported a coded fallback rather than fabricating a name.
-  Root cause: an ingestion gap (`full_ingestion.ipynb`'s `detect_coded_fields` only
+  Root cause: an ingestion gap (`data/full_ingestion.ipynb`'s `detect_coded_fields` only
   recognised integer-coded fields, missing `local_authority_highway`/
   `local_authority_ons_district`, which use alphanumeric ONS codes). Fixed at the
   source (both now decoded to names) and hidden from `get_schema` on the agent side

@@ -10,7 +10,7 @@ import re
 import sqlite3
 from datetime import datetime, timezone
 
-from models import ColumnInfo, GetCurrentDatetimeResult, GetSchemaResult, TableSchema
+from model.models import ColumnInfo, GetCurrentDatetimeResult, GetSchemaResult, TableSchema
 
 DB_PATH = "data/road_safety.db"
 

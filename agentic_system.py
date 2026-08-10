@@ -41,9 +41,9 @@ from pathlib import Path
 import requests
 from pydantic import ValidationError
 
-from init_logging_db import LOGGING_DB_PATH
-from models import GetSchemaResult, RunSqlArgs
-from tools import SqlValidationError, get_current_datetime, get_schema, run_sql
+from model.models import GetSchemaResult, RunSqlArgs
+from model.tools import SqlValidationError, get_current_datetime, get_schema, run_sql
+from prompt.init_logging_db import LOGGING_DB_PATH
 
 API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"

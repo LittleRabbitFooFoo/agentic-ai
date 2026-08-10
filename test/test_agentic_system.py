@@ -8,7 +8,7 @@ again later in the same conversation.
 from unittest.mock import patch
 
 from agentic_system import AgentState, execute_tool
-from models import ColumnInfo, GetSchemaResult, TableSchema
+from model.models import ColumnInfo, GetSchemaResult, TableSchema
 
 
 def test_schema_cache_only_calls_get_schema_once_per_session():

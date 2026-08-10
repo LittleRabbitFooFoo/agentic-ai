@@ -6,7 +6,7 @@ NOT EXISTS, safe to run against an existing logging.db without wiping it.
 
 import sqlite3
 
-LOGGING_DB_PATH = "logging.db"
+LOGGING_DB_PATH = "prompt/logging.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS prompts (

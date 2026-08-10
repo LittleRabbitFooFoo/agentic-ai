@@ -72,7 +72,7 @@ traffic collision database, pre-curated "last 5 years" extract (collision years
 2021–2025 inclusive): <https://www.gov.uk/government/statistical-data-sets/road-safety-open-data>
 
 Three source tables (collision, vehicle, casualty) are ingested and denormalised into
-a single SQLite database, `data/road_safety.db`, by `full_ingestion.ipynb`. That
+a single SQLite database, `data/road_safety.db`, by `data/full_ingestion.ipynb`. That
 database actually contains **6 tables**: the denormalised `collision`/`vehicle`/
 `casualty` tables (decoded text values — the agent's query surface) plus
 `collision_normalised`/`vehicle_normalised`/`casualty_normalised` (integer-coded
@@ -85,16 +85,31 @@ below.
 
 ## What was built
 
+Everything besides the five root-level submission artifacts is parcelled into
+`model/`, `prompt/`, and `test/` — root stays to just what's meant to be graded
+directly.
+
 | File | Purpose |
 |---|---|
-| `models.py` | Pydantic models for tool argument/result shape validation |
-| `tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — populated for only 194/513,801 collision rows), `run_sql` (validator + read-only connection), `get_current_datetime` |
-| `init_logging_db.py` | Creates the logging DB (`prompts`, `conversations` tables) |
-| `seed_system_prompt.py`, `seed_system_prompt_v2.py`, `seed_system_prompt_v3.py` | Inserts and activates system prompt v1/v2/v3 in turn — each a new immutable row, `is_active` flipped, per the plan's §8 traceability design. **Run v3 last** (or just v3 alone against a fresh logging DB) to get the current behaviour; v1/v2 exist for history, not for re-running in production. |
-| `agentic_system.py` | The REPL agent itself (the actual running model) |
-| `test_tools.py`, `test_agentic_system.py` | pytest suite |
-| `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations, plus a later "v3 re-run" section re-running the full set after the prompt/data fixes below |
-| `logging.db` | Populated logging DB from all evaluation runs (tracked in git — it's KBs, not a large-data problem) |
+| `agentic_system.py` | The REPL agent itself (the actual running model) — **stays in root** |
+| `testing.ipynb` | Workbench notebook: reconstructs logged conversations from the Task 9 evaluation run, with observations, plus a later "v3 re-run" section re-running the full set after the prompt/data fixes below — **stays in root** |
+| `requirements.txt` | **stays in root** |
+| `Agentic_AI_System_Design_Report.ipynb` / `.pdf` | **stays in root** |
+| `model/models.py` | Pydantic models for tool argument/result shape validation |
+| `model/tools.py` | `get_schema` (3 denormalised tables only, composite unique keys surfaced, `local_authority_district` hidden — populated for only 194/513,801 collision rows), `run_sql` (validator + read-only connection), `get_current_datetime` |
+| `prompt/init_logging_db.py` | Creates the logging DB (`prompts`, `conversations` tables) |
+| `prompt/seed_system_prompt.py`, `prompt/seed_system_prompt_v2.py`, `prompt/seed_system_prompt_v3.py` | Inserts and activates system prompt v1/v2/v3 in turn — each a new immutable row, `is_active` flipped, per the plan's §8 traceability design. **Run v3 last** (or just v3 alone against a fresh logging DB) to get the current behaviour; v1/v2 exist for history, not for re-running in production. |
+| `prompt/logging.db` | Populated logging DB from all evaluation runs (tracked in git — it's KBs, not a large-data problem) |
+| `test/test_tools.py`, `test/test_agentic_system.py` | pytest suite |
+| `data/full_ingestion.ipynb` | Builds `data/road_safety.db` from the raw STATS19 CSVs — see Reproduction below |
+
+`model/` and `prompt/` are plain Python packages (`__init__.py`, imported as
+`model.tools`, `prompt.init_logging_db`, etc.) — a root-level `pytest.ini`
+(`pythonpath = .`) makes that resolve correctly regardless of where `pytest` is
+invoked from. `prompt/seed_system_prompt*.py` and `prompt/init_logging_db.py` import
+each other as plain siblings (`from init_logging_db import ...`), since they're run
+directly as scripts from the repo root (`python prompt/seed_system_prompt_v3.py`),
+which puts their own directory on `sys.path`, not the package path.
 
 Docker containerisation (implementation plan §12) was **not implemented** — dropped
 per a standing "no Docker in any capstone project" constraint, noted as a Future
@@ -104,19 +119,22 @@ Extension in the design report rather than attempted.
 
 1. **Get the raw STATS19 CSVs.** Download the "last 5 years" collision, vehicle, and
    casualty extracts from the DfT link above into `data/raw/` (filenames expected by
-   `full_ingestion.ipynb`:
+   `data/full_ingestion.ipynb`:
    `dft-road-casualty-statistics-{collision,vehicle,casualty}-last-5-years.csv`).
-2. **Build the STATS19 database.** Run `full_ingestion.ipynb` top-to-bottom. This
-   produces `data/road_safety.db` (~1.3GB, gitignored).
+2. **Build the STATS19 database.** Run `data/full_ingestion.ipynb` top-to-bottom
+   (Jupyter executes it with its own directory as the working directory, so its
+   internal paths are written relative to `data/`, not the repo root). This produces
+   `data/road_safety.db` (~1.3GB, gitignored).
 3. **Initialise the logging database and seed the system prompt** (skip if you want
-   to keep the evaluation-run `logging.db` already in the repo):
+   to keep the evaluation-run `prompt/logging.db` already in the repo), run from the
+   repo root:
    ```
-   python init_logging_db.py
-   python seed_system_prompt_v3.py
+   python prompt/init_logging_db.py
+   python prompt/seed_system_prompt_v3.py
    ```
-   (v3 is the current active version — see the file table above. `seed_system_prompt.py`
-   and `seed_system_prompt_v2.py` insert v1/v2 for history; only run them first, before
-   v3, if you want the full version history in a fresh `logging.db`.)
+   (v3 is the current active version — see the file table above. `prompt/seed_system_prompt.py`
+   and `prompt/seed_system_prompt_v2.py` insert v1/v2 for history; only run them first,
+   before v3, if you want the full version history in a fresh `prompt/logging.db`.)
 4. **Set your API key** — create a `.env` file in the project root:
    ```
    ANTHROPIC_API_KEY=sk-ant-...
@@ -154,7 +172,7 @@ pip install -r requirements.txt
 (gitignored), not the shared jupyterlab venv used elsewhere on this machine — that
 distinction matters: freezing a shared venv previously produced ~540 unrelated
 packages on another capstone project. Freezing a clean, scoped venv containing only
-this project's dependencies keeps it to 108 packages and satisfies the literal
+this project's dependencies keeps it to 110 packages and satisfies the literal
 `pip freeze > requirements.txt` requirement without that problem. Reproducibility was
 verified for real — installed into a second, independent venv and the full pytest
 suite passed there too, not just a successful `pip install`.
@@ -166,8 +184,8 @@ Worth being explicit about, since they carry different reliability guarantees:
 - **Code-enforced (hard):** the read-only SQLite connection, the SQL validator
   (single `SELECT`, no chaining, no write keywords), schema-cache-once-per-session,
   `local_authority_district` hidden from `get_schema`. These hold regardless of model
-  behaviour — verified by `test_tools.py`/`test_agentic_system.py`, not just observed
-  in conversation.
+  behaviour — verified by `test/test_tools.py`/`test/test_agentic_system.py`, not just
+  observed in conversation.
 - **Prompt-engineered (soft):** schema-first behaviour, out-of-domain/write refusal,
   asking which column is meant on ambiguity, tie-reporting, excluding NULL from
   rankings (v2/v3). These have held in every live test run so far (see `testing.ipynb`),
