@@ -16,6 +16,15 @@ DB_PATH = "data/road_safety.db"
 
 DOMAIN_TABLES = ("collision", "vehicle", "casualty")
 
+# Columns hidden from get_schema despite existing in the table: almost entirely
+# unpopulated in this dataset (see data_gap.ipynb), so hiding them steers the
+# model toward the coded alternative (local_authority_highway /
+# local_authority_ons_district) that's actually populated for every year,
+# rather than it discovering the gap turn by turn as in the Task 9 Q4/5 run.
+EXCLUDED_COLUMNS = {
+    "collision": {"local_authority_district"},
+}
+
 _WRITE_KEYWORDS = (
     "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "REPLACE",
     "ATTACH", "DETACH", "PRAGMA", "VACUUM", "TRUNCATE", "GRANT", "REVOKE",
@@ -101,9 +110,12 @@ def get_schema(db_path: str = DB_PATH) -> GetSchemaResult:
     try:
         tables = []
         for table in DOMAIN_TABLES:
+            excluded = EXCLUDED_COLUMNS.get(table, set())
             cursor = conn.execute(f"PRAGMA table_info({table})")
             columns = [
-                ColumnInfo(name=row[1], type=row[2]) for row in cursor.fetchall()
+                ColumnInfo(name=row[1], type=row[2])
+                for row in cursor.fetchall()
+                if row[1] not in excluded
             ]
             tables.append(
                 TableSchema(

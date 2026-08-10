@@ -36,7 +36,9 @@ def domain_shaped_db(tmp_path):
     conn = sqlite3.connect(db_path)
     conn.executescript(
         """
-        CREATE TABLE collision (collision_index TEXT, collision_year INTEGER);
+        CREATE TABLE collision (
+            collision_index TEXT, collision_year INTEGER, local_authority_district TEXT
+        );
         CREATE UNIQUE INDEX idx_collision_key ON collision(collision_index);
 
         CREATE TABLE vehicle (collision_index TEXT, vehicle_reference INTEGER);
@@ -165,3 +167,14 @@ def test_get_schema_reports_composite_unique_keys(domain_shaped_db):
     assert keys_by_table["casualty"] == [
         ["collision_index", "vehicle_reference", "casualty_reference"]
     ]
+
+
+def test_get_schema_hides_local_authority_district(domain_shaped_db):
+    # Almost entirely unpopulated in the real dataset (see data_gap.ipynb) — hidden
+    # so the model uses local_authority_highway/ons_district instead.
+    result = get_schema(db_path=domain_shaped_db)
+    collision_columns = next(t.columns for t in result.tables if t.table == "collision")
+    column_names = [c.name for c in collision_columns]
+
+    assert "local_authority_district" not in column_names
+    assert "collision_index" in column_names  # sanity check: other columns unaffected
