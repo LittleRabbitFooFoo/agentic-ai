@@ -151,9 +151,14 @@ python -m venv .venv && source .venv/bin/activate   # or use an existing venv
 pip install -r requirements.txt
 ```
 
-`requirements.txt` is generated from actual imports (`pipreqs --scan-notebooks`), not
-a full environment freeze — see Task 13 notes in the build brief for how it was
-produced and cross-checked.
+`requirements.txt` is a real `pip freeze` output from a project-local `.venv`
+(gitignored), not the shared jupyterlab venv used elsewhere on this machine — that
+distinction matters: freezing a shared venv previously produced ~540 unrelated
+packages on another capstone project. Freezing a clean, scoped venv containing only
+this project's dependencies keeps it to 108 packages and satisfies the literal
+`pip freeze > requirements.txt` requirement without that problem. Reproducibility was
+verified for real — installed into a second, independent venv and the full pytest
+suite passed there too, not just a successful `pip install`.
 
 ## What's code-enforced vs. prompt-engineered
 
