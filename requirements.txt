@@ -1,2 +1,22 @@
-# Populated properly at Task 13 (pipreqs --scan-notebooks, cross-checked against
-# installed versions) — not a pip freeze of the whole environment.
+# Generated via pipreqs --scan-notebooks (scoped import scan across repl.py,
+# tools.py, models.py, test_*.py, and all notebooks) — not a pip freeze of the
+# whole environment. Versions cross-checked against what's actually installed
+# and tested (pipreqs falls back to latest-on-PyPI for anything it can't
+# detect locally, which drifted on pandas/pytest/requests/numpy/matplotlib
+# here). Jupyter runtime deps (jupyterlab/nbconvert/ipykernel) added manually
+# since pipreqs only scans imports, not the notebook runtime itself.
+
+pydantic==2.13.4
+pytest==9.0.3
+requests==2.33.1
+
+# Used by full_ingestion.ipynb / data_workflow.ipynb (data ingestion notebooks)
+matplotlib==3.10.0
+numpy==2.1.0
+pandas==2.3.2
+seaborn==0.13.2
+
+# Jupyter runtime (not import-detected, added manually)
+jupyterlab==4.4.7
+nbconvert==7.17.1
+ipykernel==6.31.0
