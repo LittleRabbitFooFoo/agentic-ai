@@ -1,0 +1,2 @@
+# Populated properly at Task 13 (pipreqs --scan-notebooks, cross-checked against
+# installed versions) — not a pip freeze of the whole environment.

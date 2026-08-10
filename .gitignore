@@ -1,0 +1,19 @@
+# STATS19 data — too large to commit, rebuild via full_ingestion.ipynb (see README)
+data/road_safety.db
+data/raw/*.csv
+
+# Logging DB — runtime-generated state, not source
+logging.db
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Editors / OS
+.DS_Store
