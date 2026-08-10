@@ -9,6 +9,25 @@ Agent state (§5 of the implementation plan) is a lightweight in-memory
 object scoped to one conversation_id — no rollback, by design. Every
 turn (user input, assistant text, tool calls, tool results) is logged to
 the `conversations` table, tagged with whichever `prompts` row is active.
+
+SUMMARY (purpose, behaviour, challenges, limitations — see
+Agentic_AI_System_Design_Report.ipynb for the full narrative and
+testing.ipynb for full transcripts):
+This agent answers natural-language questions about UK road collisions by
+reasoning over three tools (schema introspection, validated read-only
+SQL, current-date lookup) against a local STATS19 SQLite database, with
+every turn logged for traceability. Across three prompt-only design
+iterations (v1-v3, seed_system_prompt*.py) it learned to flag ambiguous
+column choices, report ties rather than picking arbitrarily, and exclude
+missing data from rankings — each fix triggered by a real observed
+failure, not synthetic testing. The main challenge encountered was a
+genuine NL-to-SQL reliability bug (`COUNT(DISTINCT ...)` miscounting a
+key that's only unique per collision, not globally), fixed by having
+get_schema expose composite unique keys rather than just column names.
+Known limitations: schema-first compliance and all v2/v3 behaviours are
+prompt-engineered, not code-enforced, and the one live prompt-injection
+attempt tested was refused before it ever reached the SQL validator or
+read-only connection it was meant to exercise.
 """
 
 import json
